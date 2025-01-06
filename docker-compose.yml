@@ -1,0 +1,43 @@
+version: '3.3'
+services:
+  app:
+    build:
+      context: . # 使用当前目录作为构建上下文
+      dockerfile: Dockerfile # 指定 Dockerfile 文件（如果名称为 Dockerfile 可省略）
+    image: app:0.0.1
+    container_name: app
+    ports:
+      - "8080:8080"  # 将容器内的 8080 端口映射到宿主机的 8080 端口
+    networks:
+      - app-network # 配置网络
+    restart: always
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.12
+    container_name: etcd
+    environment:
+      - ETCD_NAME=etcd-node
+      - ETCD_DATA_DIR=/var/etcd
+      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
+      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
+      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd:2380
+      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379
+      - ETCD_INITIAL_CLUSTER=etcd=http://etcd:2380
+      - ETCD_INITIAL_CLUSTER_TOKEN=etcd-cluster-1
+      - ETCD_INITIAL_CLUSTER_STATE=new
+    volumes:
+      - ./environment/etcd/data:/var/etcd
+      - ./environment/etcd/config/etcd.conf.yml:/etc/etcd/etcd.conf.yml
+      - /etc/localtime:/etc/localtime:ro
+
+    command: /usr/local/bin/etcd --config-file=/etc/etcd/etcd.conf.yml
+    ports:
+          - "2379:2379"
+          - "2380:2380"  # 如果需要 peer 通信端口的话，可以映射到宿主机
+    networks:
+      - app-network # 配置网络
+    restart: always
+
+networks:
+  app-network:
+    driver: bridge # 选择合适的网络类型
